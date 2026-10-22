@@ -1,4 +1,4 @@
-# EKŌ (formerly JAL Studio)
+# JAL Studio (formerly EKŌ)
 
 A premium, high-fashion mobile marketplace inspired by ASOS and SSENSE, designed exclusively for the Nigerian market. EKŌ connects elite local fashion ateliers with modern buyers through a minimalist, luxury editorial mobile experience.
 
