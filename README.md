@@ -1,41 +1,86 @@
-# JAL Studio (formerly EKŌ)
+# JAL Studio
 
-A premium, high-fashion mobile marketplace inspired by ASOS and SSENSE, designed exclusively for the Nigerian market. EKŌ connects elite local fashion ateliers with modern buyers through a minimalist, luxury editorial mobile experience.
+EKŌ is a Flutter storefront backed by a Node.js/Express API and MongoDB. The
+Flutter app is organized by feature; shared networking, storage, theme, and UI
+utilities live under `lib/core`.
 
-## 🚀 The 12-Week MVP Vision
-This project is currently in a 12-week rapid development sprint. The MVP scope is strictly constrained to ensure a fast, reliable launch:
-*   **Currency:** Naira (₦ NGN) only.
-*   **Theme:** Light mode only (pure white backgrounds, deep black text, subtle beige/gold accents).
-*   **Payments:** Direct split-settlement via Paystack and Flutterwave integrations.
-*   **Typography:** Playfair Display (Headers) & Inter/SF Pro (Body).
+## Requirements
 
-## 🛠️ Tech Stack
-*   **Framework:** [Flutter](https://flutter.dev/) (Dart)
-*   **State Management:** [Riverpod](https://riverpod.dev/)
-*   **Networking:** Dio
-*   **UI/Design:** Google Fonts, Lucide Icons, Cached Network Image
-*   **Backend:** Node.js (NestJS) + MongoDB Atlas (Hosted separately)
+- Flutter SDK and Dart (see `pubspec.yaml` for the Dart SDK constraint)
+- Node.js 20 or newer and npm
+- MongoDB 7 or newer, locally or hosted
 
-## 📂 Feature-First Architecture
-To ensure high velocity and prevent merge conflicts, this app strictly follows a **Feature-First Domain-Driven Architecture**. Every feature contains its own UI (`presentation`), State (`providers`), and API logic (`data`).
+## Start the API
+
+```powershell
+cd backend
+Copy-Item .env.example .env
+npm install
+```
+
+Set `MONGODB_URI` and replace `JWT_SECRET` in `backend/.env` with a private,
+random value. Then start the API and, in a second terminal, optionally seed
+the catalog:
+
+```powershell
+npm run dev
+npm run seed
+```
+
+The API listens on `http://localhost:4000` by default. It exposes
+`/api/v1/health`, catalog, authentication, account, cart, and order endpoints.
+The seed command is safe to rerun for its sample catalog records.
+
+Alternatively, with Docker Engine running, from the repository root:
+
+```powershell
+docker compose -f backend/docker-compose.yml up --build
+```
+
+The backend tests use an in-memory MongoDB and do not require a local MongoDB
+service:
+
+```powershell
+cd backend
+npm test
+npm audit
+```
+
+## Run the Flutter app
+
+From the repository root:
+
+```powershell
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1
+```
+
+For an Android emulator, use
+`--dart-define=API_BASE_URL=http://10.0.2.2:4000/api/v1`. For a physical device,
+use the development machine's LAN address and allow the device through the
+machine's firewall. `API_BASE_URL` defaults to the local API URL above.
+
+## Structure
 
 ```text
-eko_threads_app/
-├── lib/
-│   ├── main.dart                 # App entry & ProviderScope
-│   ├── app.dart                  # MaterialApp & routing
-│   │
-│   ├── core/                     # 🛠️ APP-WIDE GLOBALS
-│   │   ├── theme/                # Colors, Typography (Light mode only)
-│   │   ├── widgets/              # Reusable UI (Buttons, Skeletons)
-│   │   ├── network/              # Dio client, Interceptors
-│   │   └── utils/                # Currency/Date formatters
-│   │
-│   └── features/                 # 📱 THE DOMAINS
-│       ├── splash/               # App initialization & token checks
-│       ├── auth/                 # Login, OTP, Registration
-│       ├── discovery/            # Home feed, Editorial banners
-│       ├── product/              # PDP, Image carousel, Size selectors
-│       ├── cart_checkout/        # Bag, Paystack UI, Order summary
-│       ├── profile/              # User settings, Measurements, History
-│       └── seller_studio/        # Vendor dashboard, Order management
+backend/
+  src/
+    config/       Environment and MongoDB setup
+    middleware/   Authentication and error handling
+    models/       Mongoose data models
+    routes/       Versioned API endpoints
+  test/           HTTP integration tests
+lib/
+  app.dart        App theme and root widget
+  core/           Shared API, secure storage, theme, widgets, utilities
+  features/       Auth, catalog, cart/checkout, account, profile, messaging
+  screens/        Main tab shell
+test/             Flutter widget tests
+```
+
+## Payments
+
+Checkout currently creates an order with `paymentStatus: pending`. No payment
+is collected or represented as successful. Configure a payment provider,
+server-side verification, and verified webhooks before accepting live
+payments.

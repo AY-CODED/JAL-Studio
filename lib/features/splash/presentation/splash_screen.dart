@@ -1,7 +1,8 @@
-
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
+
+import '../../../screens/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,14 +41,8 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 5200),
     );
 
-    _imageScale = Tween<double>(
-      begin: 1.04,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _introController,
-        curve: Curves.easeOutCubic,
-      ),
+    _imageScale = Tween<double>(begin: 1.04, end: 1.0).animate(
+      CurvedAnimation(parent: _introController, curve: Curves.easeOutCubic),
     );
 
     _imageFade = CurvedAnimation(
@@ -59,10 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
     _glowController.repeat(reverse: true);
     _loadingController.forward();
 
-    _navigationTimer = Timer(
-      const Duration(milliseconds: 5200),
-      _goToHome,
-    );
+    _navigationTimer = Timer(const Duration(milliseconds: 5200), _goToHome);
   }
 
   void _goToHome() {
@@ -81,15 +73,16 @@ class _SplashScreenState extends State<SplashScreen>
               curve: Curves.easeInOut,
             ),
             child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.025),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                ),
-              ),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0, 0.025),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
               child: child,
             ),
           );
@@ -161,8 +154,8 @@ class _SplashScreenState extends State<SplashScreen>
                             radius: 1.1,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.08),
-                              Colors.black.withOpacity(0.30),
+                              Colors.black.withValues(alpha: 0.08),
+                              Colors.black.withValues(alpha: 0.30),
                             ],
                             stops: const [0.35, 0.72, 1.0],
                           ),
@@ -174,16 +167,14 @@ class _SplashScreenState extends State<SplashScreen>
                     Positioned(
                       left: 50,
                       right: 50,
-                      bottom:
-                          MediaQuery.of(context).padding.bottom + 35,
+                      bottom: MediaQuery.of(context).padding.bottom + 35,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(20),
                         child: LinearProgressIndicator(
                           value: _loadingController.value,
                           minHeight: 3,
                           backgroundColor: Colors.white24,
-                          valueColor:
-                              const AlwaysStoppedAnimation<Color>(
+                          valueColor: const AlwaysStoppedAnimation<Color>(
                             Color(0xFFD6B36A),
                           ),
                         ),
