@@ -4,6 +4,7 @@ import '../../../core/theme/store_colors.dart';
 import '../../../core/widgets/store_components.dart';
 import '../domain/store_product.dart';
 import 'catalog_widgets.dart';
+import 'product_information_pages.dart';
 
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({
@@ -14,7 +15,8 @@ class ProductDetailsPage extends StatefulWidget {
     required this.onWishlist,
   });
   final StoreProduct product;
-  final Future<void> Function(StoreProduct product, String size) onAddToBag;
+  final Future<void> Function(StoreProduct product, String size, String? color)
+  onAddToBag;
   final bool isWishlisted;
   final VoidCallback onWishlist;
 
@@ -24,7 +26,18 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage> {
   String _size = 'M';
+  String? _color;
   late bool _isWishlisted = widget.isWishlisted;
+
+  @override
+  void initState() {
+    super.initState();
+    _size = widget.product.sizes.isEmpty
+        ? 'One size'
+        : widget.product.sizes.first;
+    _color = widget.product.colors.isEmpty ? null : widget.product.colors.first;
+  }
+
   @override
   Widget build(BuildContext context) => StorePageScaffold(
     title: 'E K Ō',
@@ -121,38 +134,80 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
-                  '★  4.8  (124 reviews)     ·     ● In Stock',
-                  style: TextStyle(fontSize: 12, color: StoreColors.muted),
+                Row(
+                  children: [
+                    Text(
+                      '★  ${widget.product.rating.toStringAsFixed(1)} '
+                      '(${widget.product.reviewCount} reviews)',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: StoreColors.muted,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ProductReviewsPage(product: widget.product),
+                        ),
+                      ),
+                      child: const Text('Read reviews'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 const Text('Color', style: TextStyle(fontSize: 13)),
                 const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    ColorDot(color: Color(0xFF243957), selected: true),
-                    ColorDot(color: Colors.black),
-                    ColorDot(color: Color(0xFFCABC9D)),
-                    ColorDot(color: Color(0xFFB7B9B8)),
-                  ],
+                Wrap(
+                  spacing: 8,
+                  children: widget.product.colors.isEmpty
+                      ? const [
+                          Text('See product photos for available colours.'),
+                        ]
+                      : widget.product.colors
+                            .map(
+                              (color) => ChoiceChip(
+                                label: Text(color),
+                                selected: _color == color,
+                                onSelected: (_) =>
+                                    setState(() => _color = color),
+                              ),
+                            )
+                            .toList(),
                 ),
                 const SizedBox(height: 16),
                 const Text('Size', style: TextStyle(fontSize: 13)),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => SizeGuidePage(product: widget.product),
+                      ),
+                    ),
+                    child: const Text('Size guide'),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  children: ['S', 'M', 'L', 'XL', 'XXL']
-                      .map(
-                        (size) => ChoiceChip(
-                          label: Text(size),
-                          selected: _size == size,
-                          onSelected: (_) => setState(() => _size = size),
-                          selectedColor: StoreColors.sand,
-                          backgroundColor: Colors.white,
-                          side: const BorderSide(color: StoreColors.line),
-                        ),
-                      )
-                      .toList(),
+                  children:
+                      (widget.product.sizes.isEmpty
+                              ? const ['One size']
+                              : widget.product.sizes)
+                          .map(
+                            (size) => ChoiceChip(
+                              label: Text(size),
+                              selected: _size == size,
+                              onSelected: (_) => setState(() => _size = size),
+                              selectedColor: StoreColors.sand,
+                              backgroundColor: Colors.white,
+                              side: const BorderSide(color: StoreColors.line),
+                            ),
+                          )
+                          .toList(),
                 ),
                 const Divider(height: 30),
                 const Text(
@@ -174,7 +229,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: () async {
-                      await widget.onAddToBag(widget.product, _size);
+                      await widget.onAddToBag(widget.product, _size, _color);
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Added to your bag')),

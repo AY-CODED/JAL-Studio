@@ -23,6 +23,12 @@ class _CategoryChipsState extends State<CategoryChips> {
   late String _selected = widget.selected;
 
   @override
+  void didUpdateWidget(covariant CategoryChips oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) _selected = widget.selected;
+  }
+
+  @override
   Widget build(BuildContext context) => SizedBox(
     height: 40,
     child: ListView.separated(

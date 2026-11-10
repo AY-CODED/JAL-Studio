@@ -38,4 +38,10 @@ class AuthController extends AsyncNotifier<AuthUser?> {
     await ref.read(authRepositoryProvider).signOut();
     state = const AsyncData(null);
   }
+
+  Future<void> refreshProfile() async {
+    state = await AsyncValue.guard(
+      () => ref.read(authRepositoryProvider).restoreSession(),
+    );
+  }
 }

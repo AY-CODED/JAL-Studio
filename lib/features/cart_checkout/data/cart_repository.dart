@@ -19,14 +19,16 @@ class CartRepository {
   Future<StoreCart> addItem({
     required String productId,
     required int quantity,
-    required String size,
+    String? size,
+    String? color,
   }) async {
     final response = await client.dio.post<Map<String, dynamic>>(
       '/cart/items',
       data: {
         'productId': productId,
         'quantity': quantity,
-        if (size.isNotEmpty) 'size': size,
+        if (size != null && size.isNotEmpty) 'size': size,
+        if (color != null && color.isNotEmpty) 'color': color,
       },
     );
     return StoreCart.fromJson(

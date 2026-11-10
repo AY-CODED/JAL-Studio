@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../catalog/domain/store_product.dart';
 
 class DeliveryAddress {
   const DeliveryAddress({
@@ -88,6 +89,33 @@ class AccountRepository {
     return response.data!['data']['user']['notifications']
         as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await client.dio.get<Map<String, dynamic>>('/account/me');
+    return response.data!['data']['user'] as Map<String, dynamic>;
+  }
+
+  Future<List<StoreProduct>> getWishlist() async {
+    final response = await client.dio.get<Map<String, dynamic>>(
+      '/account/wishlist',
+    );
+    return (response.data!['data'] as List<dynamic>)
+        .map(
+          (item) => StoreProduct.fromJson(
+            item as Map<String, dynamic>,
+            imageOrigin: ApiConfig.origin,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<void> addToWishlist(String productId) async {
+    await client.dio.post<void>('/account/wishlist/$productId');
+  }
+
+  Future<void> removeFromWishlist(String productId) async {
+    await client.dio.delete<void>('/account/wishlist/$productId');
+  }
 }
 
 final accountRepositoryProvider = Provider<AccountRepository>(
@@ -104,4 +132,17 @@ final profileNotificationsProvider = FutureProvider<Map<String, dynamic>>((
 ) async {
   await ref.watch(authProvider.future);
   return ref.watch(accountRepositoryProvider).getNotifications();
+});
+
+final accountProfileProvider = FutureProvider<Map<String, dynamic>>((
+  ref,
+) async {
+  await ref.watch(authProvider.future);
+  return ref.watch(accountRepositoryProvider).getProfile();
+});
+
+final wishlistProvider = FutureProvider<List<StoreProduct>>((ref) async {
+  final user = await ref.watch(authProvider.future);
+  if (user == null) return const [];
+  return ref.watch(accountRepositoryProvider).getWishlist();
 });

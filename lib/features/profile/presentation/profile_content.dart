@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/store_colors.dart';
+import '../../account/data/account_repository.dart';
 import '../../account/presentation/account_pages.dart';
+import '../../cart_checkout/data/order_repository.dart';
 import '../../messaging/presentation/messages_page.dart';
+import '../../seller/presentation/seller_portal_page.dart';
+import '../../support/presentation/support_page.dart';
+import '../../admin/presentation/admin_operations_page.dart';
 
 class ProfileContent extends StatelessWidget {
   const ProfileContent({
@@ -12,6 +18,7 @@ class ProfileContent extends StatelessWidget {
     this.email,
     this.onSignIn,
     this.onSignOut,
+    this.isAdmin = false,
   });
 
   final ValueChanged<Widget> onOpen;
@@ -19,6 +26,7 @@ class ProfileContent extends StatelessWidget {
   final String? email;
   final VoidCallback? onSignIn;
   final VoidCallback? onSignOut;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -89,7 +97,7 @@ class ProfileContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        const _StatsRow(),
+        _StatsRow(signedIn: userName != null),
         const SizedBox(height: 18),
         _SectionHeading(
           title: 'My Measurements',
@@ -97,7 +105,7 @@ class ProfileContent extends StatelessWidget {
           onTap: () => onOpen(const BodyMeasurementsPage()),
         ),
         const SizedBox(height: 10),
-        const _MeasurementSummary(),
+        _MeasurementSummary(signedIn: userName != null),
         const SizedBox(height: 22),
         _SectionHeading(
           title: 'Recent Orders',
@@ -105,11 +113,22 @@ class ProfileContent extends StatelessWidget {
           onTap: () => onOpen(const OrderHistoryPage()),
         ),
         const SizedBox(height: 8),
-        ...[
-          'Custom Suit Set',
-          'Linen Blend Outfit',
-          'Classic Overcoat',
-        ].map((name) => _OrderPreview(name: name)),
+        if (userName != null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Your real order history is available in View all.',
+              style: TextStyle(fontSize: 12, color: StoreColors.muted),
+            ),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Sign in to view your orders.',
+              style: TextStyle(fontSize: 12, color: StoreColors.muted),
+            ),
+          ),
         const SizedBox(height: 14),
         ...[
           (
@@ -132,7 +151,23 @@ class ProfileContent extends StatelessWidget {
             'Chat with your stylist and ateliers',
             const MessagesPage(),
           ),
-          ('Help & Support', 'FAQs and contact us', const HelpSupportPage()),
+          (
+            'Help & Support',
+            'Send and follow support requests',
+            const SupportPage(),
+          ),
+          if (userName != null)
+            (
+              'Seller Studio',
+              'Apply to sell and manage your atelier',
+              const SellerPortalPage(),
+            ),
+          if (isAdmin)
+            (
+              'Admin Operations',
+              'Review the marketplace and customer requests',
+              const AdminOperationsPage(),
+            ),
         ].map(
           (item) => _ProfileLink(
             title: item.$1,
@@ -166,26 +201,44 @@ class ProfileContent extends StatelessWidget {
   );
 }
 
-class _StatsRow extends StatelessWidget {
-  const _StatsRow();
+class _StatsRow extends ConsumerWidget {
+  const _StatsRow({required this.signedIn});
+
+  final bool signedIn;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 14),
-    decoration: BoxDecoration(
-      border: Border.all(color: StoreColors.line),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _Stat(value: '12', label: 'Orders'),
-        _Stat(value: '3', label: 'Measurements'),
-        _Stat(value: '2', label: 'Saved looks'),
-        _Stat(value: '1 year+', label: 'Member since'),
-      ],
-    ),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final orderCount = signedIn
+        ? ref.watch(ordersProvider).asData?.value.length
+        : null;
+    final wishlistCount = signedIn
+        ? ref.watch(wishlistProvider).asData?.value.length
+        : null;
+    final measurements = signedIn
+        ? ref.watch(accountProfileProvider).asData?.value['measurements']
+              as Map<String, dynamic>?
+        : null;
+    final measurementCount =
+        measurements?.values
+            .where((value) => value is num && value > 0)
+            .length ??
+        0;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        border: Border.all(color: StoreColors.line),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _Stat(value: orderCount?.toString() ?? '—', label: 'Orders'),
+          _Stat(value: '$measurementCount', label: 'Measurements'),
+          _Stat(value: wishlistCount?.toString() ?? '—', label: 'Saved looks'),
+        ],
+      ),
+    );
+  }
 }
 
 class _Stat extends StatelessWidget {
@@ -204,21 +257,42 @@ class _Stat extends StatelessWidget {
   );
 }
 
-class _MeasurementSummary extends StatelessWidget {
-  const _MeasurementSummary();
+class _MeasurementSummary extends ConsumerWidget {
+  const _MeasurementSummary({required this.signedIn});
+
+  final bool signedIn;
+
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: const [
-      _MeasurementTile(label: 'Chest', value: '40 in'),
-      _MeasurementTile(label: 'Waist', value: '32 in'),
-      _MeasurementTile(label: 'Hips', value: '38 in'),
-      _MeasurementTile(label: 'Height', value: '6\'0"'),
-      _MeasurementTile(label: 'Weight', value: '75 kg'),
-      _MeasurementTile(label: 'Shoe size', value: '10 (US)'),
-    ],
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final measurements = signedIn
+        ? ref.watch(accountProfileProvider).asData?.value['measurements']
+              as Map<String, dynamic>?
+        : null;
+    const labels = {
+      'chestCm': 'Chest',
+      'waistCm': 'Waist',
+      'seatCm': 'Seat',
+      'shoulderCm': 'Shoulder',
+      'sleeveCm': 'Sleeve',
+      'insideLegCm': 'Inside leg',
+    };
+    final cells = labels.entries
+        .where((entry) => measurements?[entry.key] != null)
+        .map(
+          (entry) => _MeasurementTile(
+            label: entry.value,
+            value: '${measurements![entry.key]} cm',
+          ),
+        )
+        .toList();
+    if (cells.isEmpty) {
+      return const Text(
+        'Add measurements to save your preferred fit.',
+        style: TextStyle(color: StoreColors.muted, fontSize: 12),
+      );
+    }
+    return Wrap(spacing: 8, runSpacing: 8, children: cells);
+  }
 }
 
 class _MeasurementTile extends StatelessWidget {
@@ -269,28 +343,6 @@ class _SectionHeading extends StatelessWidget {
         ),
       ),
     ],
-  );
-}
-
-class _OrderPreview extends StatelessWidget {
-  const _OrderPreview({required this.name});
-  final String name;
-  @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.asset(
-        'assets/images/banner2.jpg',
-        width: 42,
-        height: 46,
-        fit: BoxFit.cover,
-      ),
-    ),
-    title: Text(name, style: const TextStyle(fontSize: 12)),
-    subtitle: const Text('Delivered', style: TextStyle(fontSize: 10)),
-    trailing: const Icon(Icons.chevron_right, size: 18),
-    dense: true,
   );
 }
 

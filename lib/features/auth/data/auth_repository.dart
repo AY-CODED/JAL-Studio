@@ -9,6 +9,7 @@ class AuthUser {
     required this.id,
     required this.fullName,
     required this.email,
+    this.role = 'customer',
     this.phone,
   });
 
@@ -16,12 +17,14 @@ class AuthUser {
     id: json['id'] as String,
     fullName: json['fullName'] as String,
     email: json['email'] as String,
+    role: json['role'] as String? ?? 'customer',
     phone: json['phone'] as String?,
   );
 
   final String id;
   final String fullName;
   final String email;
+  final String role;
   final String? phone;
 }
 

@@ -12,6 +12,7 @@ class StoreProduct {
     required this.stock,
     this.sizes = const [],
     this.colors = const [],
+    this.styles = const [],
     this.rating = 0,
     this.reviewCount = 0,
   });
@@ -36,6 +37,9 @@ class StoreProduct {
       colors: (json['colors'] as List<dynamic>? ?? const [])
           .cast<String>()
           .toList(growable: false),
+      styles: (json['styles'] as List<dynamic>? ?? const [])
+          .cast<String>()
+          .toList(growable: false),
       rating: (json['rating'] as num?)?.toDouble() ?? 0,
       reviewCount: json['reviewCount'] as int? ?? 0,
     );
@@ -51,6 +55,7 @@ class StoreProduct {
   final int stock;
   final List<String> sizes;
   final List<String> colors;
+  final List<String> styles;
   final double rating;
   final int reviewCount;
 

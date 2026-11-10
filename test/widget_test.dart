@@ -15,6 +15,7 @@ import 'package:jal_studio/features/auth/providers/auth_provider.dart';
 import 'package:jal_studio/features/cart_checkout/presentation/bag_content.dart';
 import 'package:jal_studio/features/cart_checkout/presentation/checkout_page.dart';
 import 'package:jal_studio/features/cart_checkout/domain/store_cart.dart';
+import 'package:jal_studio/features/cart_checkout/data/order_repository.dart';
 import 'package:jal_studio/features/catalog/data/catalog_repository.dart';
 import 'package:jal_studio/features/catalog/domain/store_product.dart';
 import 'package:jal_studio/features/catalog/presentation/filter_sort_sheet.dart';
@@ -80,6 +81,7 @@ void main() {
       ProviderScope(
         overrides: [
           addressesProvider.overrideWith((ref) async => const []),
+          paystackEnabledProvider.overrideWith((ref) async => true),
           authProvider.overrideWith(_UnauthenticatedController.new),
         ],
         child: const MaterialApp(home: CheckoutPage(cart: StoreCart.empty())),
@@ -88,9 +90,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ORDER SUMMARY'), findsOneWidget);
-    expect(find.text('Paystack Checkout'), findsOneWidget);
-    expect(find.text('Flutterwave'), findsOneWidget);
-    expect(find.text('Bank Transfer'), findsOneWidget);
+    expect(find.text('Paystack secure checkout'), findsOneWidget);
   });
 
   testWidgets('Bag and filter sheet fit on a small screen', (
@@ -125,6 +125,6 @@ void main() {
       const MaterialApp(home: Scaffold(body: FilterSortSheet())),
     );
     expect(find.text('Filter & sort'), findsOneWidget);
-    expect(find.text('Show 6 pieces'), findsOneWidget);
+    expect(find.text('Apply filters'), findsOneWidget);
   });
 }

@@ -5,6 +5,7 @@ import '../core/network/api_error_message.dart';
 import '../core/theme/store_colors.dart';
 import '../features/auth/presentation/sign_in_page.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/account/data/account_repository.dart';
 import '../features/cart_checkout/data/cart_repository.dart';
 import '../features/cart_checkout/presentation/bag_content.dart';
 import '../features/cart_checkout/presentation/checkout_page.dart';
@@ -23,7 +24,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tab = 0;
-  final Set<String> _wishlist = {};
 
   Future<void> _openPage(Widget page) async {
     await Navigator.of(context)
@@ -34,20 +34,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _openPage(
       ProductDetailsPage(
         product: product,
-        isWishlisted: _wishlist.contains(product.id),
+        isWishlisted: (ref.read(wishlistProvider).asData?.value ?? const [])
+            .any((item) => item.id == product.id),
         onWishlist: () => _toggleWishlist(product.id),
         onAddToBag: _addToBag,
       ),
     );
   }
 
-  void _toggleWishlist(String productId) {
-    setState(() {
-      if (!_wishlist.add(productId)) _wishlist.remove(productId);
-    });
+  Future<void> _toggleWishlist(String productId) async {
+    if (ref.read(authProvider).asData?.value == null) {
+      await _openPage(const SignInPage());
+      if (!mounted || ref.read(authProvider).asData?.value == null) return;
+    }
+    try {
+      final saved = (ref.read(wishlistProvider).asData?.value ?? const []).any(
+        (product) => product.id == productId,
+      );
+      if (saved) {
+        await ref.read(accountRepositoryProvider).removeFromWishlist(productId);
+      } else {
+        await ref.read(accountRepositoryProvider).addToWishlist(productId);
+      }
+      ref.invalidate(wishlistProvider);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+      }
+    }
   }
 
-  Future<void> _addToBag(StoreProduct product, String size) async {
+  Future<void> _addToBag(
+    StoreProduct product,
+    String size,
+    String? color,
+  ) async {
     if (ref.read(authProvider).asData?.value == null) {
       await _openPage(const SignInPage());
       if (!mounted || ref.read(authProvider).asData?.value == null) return;
@@ -56,7 +78,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       await ref
           .read(cartRepositoryProvider)
-          .addItem(productId: product.id, quantity: 1, size: size);
+          .addItem(
+            productId: product.id,
+            quantity: 1,
+            size: size,
+            color: color,
+          );
       ref.invalidate(cartProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,14 +103,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final catalog = ref.watch(catalogProductsProvider);
     final auth = ref.watch(authProvider);
     final cart = ref.watch(cartProvider);
-    final products = catalog.asData?.value ?? const <StoreProduct>[];
+    final wishlist = ref.watch(wishlistProvider);
+    final savedProducts = wishlist.asData?.value ?? const <StoreProduct>[];
+    final wishlistIds = savedProducts.map((product) => product.id).toSet();
     final user = auth.asData?.value;
 
     final tabs = [
       catalog.when(
         data: (items) => StoreHomeContent(
           products: items,
-          wishlist: _wishlist,
+          wishlist: wishlistIds,
           onWishlist: _toggleWishlist,
           onOpenProduct: _openProduct,
           onShop: () => setState(() => _tab = 1),
@@ -97,7 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       catalog.when(
         data: (items) => ShopContent(
           products: items,
-          wishlist: _wishlist,
+          wishlist: wishlistIds,
           onWishlist: _toggleWishlist,
           onOpenProduct: _openProduct,
         ),
@@ -109,12 +138,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       ProductCollectionPage(
         title: 'Wishlist',
-        products: products
-            .where((product) => _wishlist.contains(product.id))
-            .toList(growable: false),
+        products: savedProducts,
         onOpenProduct: _openProduct,
         onWishlist: _toggleWishlist,
-        wishlist: _wishlist,
+        wishlist: wishlistIds,
         emptyMessage: 'Your saved pieces will appear here.',
       ),
       cart.when(
@@ -136,6 +163,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         email: user?.email,
         onSignIn: () => _openPage(const SignInPage()),
         onSignOut: user == null ? null : _signOut,
+        isAdmin: user?.role == 'admin',
         onOpen: _openPage,
       ),
     ];

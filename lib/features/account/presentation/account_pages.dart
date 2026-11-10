@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_error_message.dart';
 import '../../../core/theme/store_colors.dart';
 import '../../../core/widgets/store_components.dart';
+import '../../../core/utils/currency.dart';
 import '../data/account_repository.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../cart_checkout/data/order_repository.dart';
 
 class AccountSettingsPage extends StatelessWidget {
   const AccountSettingsPage({super.key});
@@ -70,326 +73,546 @@ class AccountSettingsPage extends StatelessWidget {
   );
 }
 
-class EditProfilePage extends StatelessWidget {
+class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
+
   @override
-  Widget build(BuildContext context) => StorePageScaffold(
-    title: 'Edit Profile',
-    child: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          children: [
-            const PageIntro(
-              icon: Icons.person_outline,
-              title: 'Edit Profile',
-              subtitle: 'Your member information',
-            ),
-            const CircleAvatar(
-              radius: 42,
-              backgroundColor: StoreColors.ink,
-              child: Text(
-                'OO',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontFamily: 'serif',
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const _ProfileTextField(
-              label: 'FULL NAME',
-              initial: 'Obinna Okeke',
-            ),
-            const _ProfileTextField(
-              label: 'EMAIL ADDRESS',
-              initial: 'obinna.okeke@email.com',
-            ),
-            const _ProfileTextField(
-              label: 'PHONE NUMBER',
-              initial: '+234 803 452 1970',
-            ),
-            const _ProfileTextField(
-              label: 'DATE OF BIRTH',
-              initial: '18 September 1990',
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile changes saved')),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: StoreColors.ink,
-                  padding: const EdgeInsets.all(16),
-                ),
-                child: const Text('Save changes'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
+  ConsumerState<EditProfilePage> createState() => _EditProfilePageState();
 }
 
-class _ProfileTextField extends StatelessWidget {
-  const _ProfileTextField({required this.label, required this.initial});
-  final String label;
-  final String initial;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: TextFormField(
-      initialValue: initial,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(
-          fontSize: 9,
-          letterSpacing: 1.2,
-          color: StoreColors.muted,
-        ),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: StoreColors.line),
-        ),
-      ),
-    ),
-  );
-}
+class _EditProfilePageState extends ConsumerState<EditProfilePage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late final TextEditingController _phone;
+  bool _saving = false;
 
-class OrderHistoryPage extends StatefulWidget {
-  const OrderHistoryPage({super.key});
   @override
-  State<OrderHistoryPage> createState() => _OrderHistoryPageState();
-}
+  void initState() {
+    super.initState();
+    final user = ref.read(authProvider).asData?.value;
+    _name = TextEditingController(text: user?.fullName ?? '');
+    _phone = TextEditingController(text: user?.phone ?? '');
+  }
 
-class _OrderHistoryPageState extends State<OrderHistoryPage> {
-  bool _current = true;
   @override
-  Widget build(BuildContext context) => StorePageScaffold(
-    title: 'Order History',
-    child: Padding(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        children: [
-          Row(
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(accountRepositoryProvider).updateProfile({
+        'fullName': _name.text.trim(),
+        'phone': _phone.text.trim(),
+      });
+      await ref.read(authProvider.notifier).refreshProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile changes saved')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).asData?.value;
+    return StorePageScaffold(
+      title: 'Edit Profile',
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
+          child: Column(
             children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => setState(() => _current = true),
-                  child: Text(
-                    'Current',
-                    style: TextStyle(
-                      color: _current ? StoreColors.ink : StoreColors.muted,
-                    ),
+              const PageIntro(
+                icon: Icons.person_outline,
+                title: 'Edit Profile',
+                subtitle: 'Your member information',
+              ),
+              CircleAvatar(
+                radius: 42,
+                backgroundColor: StoreColors.ink,
+                child: Text(
+                  (user?.fullName.isNotEmpty == true
+                          ? user!.fullName[0].toUpperCase()
+                          : '?')
+                      .toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontFamily: 'serif',
                   ),
                 ),
               ),
-              Expanded(
-                child: TextButton(
-                  onPressed: () => setState(() => _current = false),
-                  child: Text(
-                    'Past orders',
-                    style: TextStyle(
-                      color: !_current ? StoreColors.ink : StoreColors.muted,
-                    ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _name,
+                decoration: const InputDecoration(labelText: 'FULL NAME'),
+                validator: (value) =>
+                    (value?.trim().length ?? 0) < 2 ? 'Enter your name' : null,
+              ),
+              TextFormField(
+                initialValue: user?.email ?? '',
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'EMAIL ADDRESS',
+                  helperText: 'Email changes require account verification.',
+                ),
+              ),
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'PHONE NUMBER'),
+                validator: (value) => (value?.trim().length ?? 0) > 30
+                    ? 'Phone number is too long'
+                    : null,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: StoreColors.ink,
+                    padding: const EdgeInsets.all(16),
                   ),
+                  child: Text(_saving ? 'Saving…' : 'Save changes'),
                 ),
               ),
             ],
           ),
-          const Divider(),
-          if (_current)
-            Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(color: StoreColors.line),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'ORDER #EKO-260508',
-                      style: TextStyle(fontSize: 9, color: StoreColors.muted),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Preparing your order',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Image.asset(
-                          'assets/images/banner2.jpg',
-                          width: 62,
-                          height: 72,
-                          fit: BoxFit.cover,
-                        ),
-                        const SizedBox(width: 8),
-                        Image.asset(
-                          'assets/images/banner3.jpg',
-                          width: 62,
-                          height: 72,
-                          fit: BoxFit.cover,
-                        ),
-                        const SizedBox(width: 10),
-                        const Text('2 pieces', style: TextStyle(fontSize: 11)),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    const PriceLine(
-                      title: 'Estimated delivery',
-                      amount: '₦468,500',
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => const SimpleInfoPage(
-                              title: 'Track order',
-                              message: 'Your order is being prepared by the atelier.',
-                            ),
+        ),
+      ),
+    );
+  }
+}
+
+class OrderHistoryPage extends ConsumerWidget {
+  const OrderHistoryPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => StorePageScaffold(
+    title: 'Order History',
+    child: ref
+        .watch(ordersProvider)
+        .when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(apiErrorMessage(error)),
+                TextButton(
+                  onPressed: () => ref.invalidate(ordersProvider),
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+          data: (orders) => orders.isEmpty
+              ? const Center(child: Text('Your orders will appear here.'))
+              : RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(ordersProvider),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(18),
+                    itemCount: orders.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final order = orders[index];
+                      final canCancel =
+                          ['paid', 'processing'].contains(order.status) ||
+                          (order.status == 'pending_payment' &&
+                              !order.hasPaymentSession);
+                      final canReturn =
+                          order.status == 'delivered' &&
+                          order.returnStatus != 'requested' &&
+                          order.returnStatus != 'approved';
+                      return Card(
+                        color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${order.orderNumber} · ${_formatDate(order.createdAt)}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: StoreColors.muted,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      order.status
+                                          .replaceAll('_', ' ')
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    formatNaira(order.totalKobo),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text('${order.itemCount} item(s)'),
+                              ...order.items.map(
+                                (item) => Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${item.name} × ${item.quantity}',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    if ([
+                                      'paid',
+                                      'processing',
+                                      'shipped',
+                                      'delivered',
+                                    ].contains(order.status))
+                                      TextButton(
+                                        onPressed: () => _writeReview(
+                                          context,
+                                          ref,
+                                          order,
+                                          item,
+                                        ),
+                                        child: const Text('Review'),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (order.returnStatus != null)
+                                Text(
+                                  'Return: ${order.returnStatus!.replaceAll('_', ' ')}',
+                                ),
+                              Wrap(
+                                children: [
+                                  if (canCancel)
+                                    TextButton(
+                                      onPressed: () => _submitReason(
+                                        context,
+                                        ref,
+                                        title: 'Request cancellation',
+                                        submit: (reason) => ref
+                                            .read(orderRepositoryProvider)
+                                            .requestCancellation(
+                                              order.id,
+                                              reason,
+                                            ),
+                                      ),
+                                      child: const Text('Request cancellation'),
+                                    ),
+                                  if (canReturn)
+                                    TextButton(
+                                      onPressed: () => _submitReason(
+                                        context,
+                                        ref,
+                                        title: 'Request a return',
+                                        submit: (reason) => ref
+                                            .read(orderRepositoryProvider)
+                                            .requestReturn(order.id, reason),
+                                      ),
+                                      child: const Text('Request return'),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        child: const Text('Track order'),
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ),
-          if (!_current)
-            const ListTile(
-              title: Text('12 FEB 2026 · #EKO-260212'),
-              subtitle: Text('Delivered'),
-              trailing: Text('₦280,000'),
-            ),
+        ),
+  );
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+  Future<void> _submitReason(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required Future<void> Function(String reason) submit,
+  }) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Reason',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Submit'),
+          ),
         ],
       ),
+    );
+    controller.dispose();
+    if (reason == null || reason.trim().length < 3) return;
+    try {
+      await submit(reason);
+      ref.invalidate(ordersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your request was submitted.')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+      }
+    }
+  }
+
+  Future<void> _writeReview(
+    BuildContext context,
+    WidgetRef ref,
+    StoreOrder order,
+    StoreOrderItem item,
+  ) async {
+    final review = await showDialog<(int, String)>(
+      context: context,
+      builder: (_) => const _ReviewDialog(),
+    );
+    if (review == null) return;
+    try {
+      await ref
+          .read(orderRepositoryProvider)
+          .requestReview(
+            productId: item.productId,
+            orderId: order.id,
+            rating: review.$1,
+            comment: review.$2,
+          );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thank you for your review.')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+      }
+    }
+  }
+}
+
+class _ReviewDialog extends StatefulWidget {
+  const _ReviewDialog();
+
+  @override
+  State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<_ReviewDialog> {
+  final _comment = TextEditingController();
+  int _rating = 5;
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Write a review'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DropdownButtonFormField<int>(
+          initialValue: _rating,
+          decoration: const InputDecoration(labelText: 'Rating'),
+          items: List.generate(
+            5,
+            (index) => DropdownMenuItem(
+              value: 5 - index,
+              child: Text('${5 - index} stars'),
+            ),
+          ),
+          onChanged: (value) => setState(() => _rating = value ?? 5),
+        ),
+        TextField(
+          controller: _comment,
+          maxLines: 4,
+          decoration: const InputDecoration(labelText: 'Your experience'),
+        ),
+      ],
     ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (_comment.text.trim().length >= 3) {
+            Navigator.pop(context, (_rating, _comment.text.trim()));
+          }
+        },
+        child: const Text('Submit'),
+      ),
+    ],
   );
 }
 
-class BodyMeasurementsPage extends StatelessWidget {
+class BodyMeasurementsPage extends ConsumerStatefulWidget {
   const BodyMeasurementsPage({super.key});
+
+  @override
+  ConsumerState<BodyMeasurementsPage> createState() =>
+      _BodyMeasurementsPageState();
+}
+
+class _BodyMeasurementsPageState extends ConsumerState<BodyMeasurementsPage> {
+  final _formKey = GlobalKey<FormState>();
+  final Map<String, String> _values = {};
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
+    final measurements = <String, Object>{};
+    for (final entry in _values.entries) {
+      if (entry.value.trim().isNotEmpty) {
+        measurements[entry.key] = double.parse(entry.value.trim());
+      }
+    }
+    setState(() => _saving = true);
+    try {
+      await ref.read(accountRepositoryProvider).updateProfile({
+        'measurements': measurements,
+      });
+      ref.invalidate(accountProfileProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Measurements saved securely.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => StorePageScaffold(
     title: 'Body Measurements',
-    child: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 190,
-              color: StoreColors.sand,
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    child: ref
+        .watch(accountProfileProvider)
+        .when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(apiErrorMessage(error)),
+                TextButton(
+                  onPressed: () => ref.invalidate(accountProfileProvider),
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+          data: (profile) {
+            final measurements =
+                profile['measurements'] as Map<String, dynamic>? ?? const {};
+            const fields = {
+              'chestCm': 'Chest',
+              'waistCm': 'Waist',
+              'seatCm': 'Seat / hips',
+              'shoulderCm': 'Shoulder',
+              'sleeveCm': 'Sleeve',
+              'insideLegCm': 'Inside leg',
+            };
+            return Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(18),
                 children: [
-                  Icon(
-                    Icons.accessibility_new,
-                    size: 110,
-                    color: Color(0xFF9A9A90),
+                  const PageIntro(
+                    icon: Icons.straighten,
+                    title: 'Body Measurements',
+                    subtitle: 'Save your fit profile in centimetres.',
                   ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'PROFILE',
-                        style: TextStyle(fontSize: 9, color: StoreColors.muted),
+                  ...fields.entries.map((entry) {
+                    final value = measurements[entry.key];
+                    return TextFormField(
+                      key: ValueKey('${entry.key}-${value ?? ''}'),
+                      initialValue: value == null ? '' : '$value',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
-                      Text(
-                        'Regular fit',
-                        style: TextStyle(fontSize: 23, fontFamily: 'serif'),
-                      ),
-                      Text(
-                        'Last updated 14 March 2026',
-                        style: TextStyle(fontSize: 9, color: StoreColors.muted),
-                      ),
-                    ],
+                      decoration: InputDecoration(labelText: entry.value),
+                      validator: (input) {
+                        if (input == null || input.trim().isEmpty) return null;
+                        final number = double.tryParse(input.trim());
+                        return number == null || number <= 0 || number > 300
+                            ? 'Enter a measurement in centimetres'
+                            : null;
+                      },
+                      onSaved: (input) => _values[entry.key] = input ?? '',
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _saving ? null : _save,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: StoreColors.ink,
+                    ),
+                    child: Text(_saving ? 'Saving…' : 'Save measurements'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Measurements help you choose a size; always confirm garment-specific sizing with the seller.',
+                    style: TextStyle(color: StoreColors.muted, fontSize: 12),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            const Wrap(
-              spacing: 0,
-              runSpacing: 0,
-              children: [
-                _MeasureCell(label: 'Chest', value: '102 cm'),
-                _MeasureCell(label: 'Waist', value: '86 cm'),
-                _MeasureCell(label: 'Seat', value: '100 cm'),
-                _MeasureCell(label: 'Shoulder', value: '47 cm'),
-                _MeasureCell(label: 'Sleeve', value: '64 cm'),
-                _MeasureCell(label: 'Inside leg', value: '81 cm'),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const ListTile(
-              tileColor: Color(0xFFE9ECE5),
-              leading: Icon(Icons.straighten),
-              title: Text(
-                'Your fit, remembered',
-                style: TextStyle(fontSize: 12),
-              ),
-              subtitle: Text(
-                'We use these measurements to recommend your best size.',
-                style: TextStyle(fontSize: 10),
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Fitting appointment request started'),
-                  ),
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: StoreColors.ink,
-                  padding: const EdgeInsets.all(16),
-                ),
-                child: const Text('Book a fitting appointment'),
-              ),
-            ),
-          ],
+            );
+          },
         ),
-      ),
-    ),
-  );
-}
-
-class _MeasureCell extends StatelessWidget {
-  const _MeasureCell({required this.label, required this.value});
-  final String label;
-  final String value;
-  @override
-  Widget build(BuildContext context) => Container(
-    width: (MediaQuery.sizeOf(context).width - 38) / 2,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(border: Border.all(color: StoreColors.line)),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: StoreColors.muted),
-        ),
-        Text(value, style: const TextStyle(fontFamily: 'serif', fontSize: 17)),
-      ],
-    ),
   );
 }
 

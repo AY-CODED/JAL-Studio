@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_error_message.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/store_colors.dart';
 import '../../../core/utils/currency.dart';
 import '../../../core/widgets/store_components.dart';
 import '../../account/data/account_repository.dart';
 import '../../account/presentation/account_pages.dart';
 import '../../catalog/presentation/catalog_widgets.dart';
+import '../data/cart_repository.dart';
 import '../data/order_repository.dart';
 import '../domain/store_cart.dart';
 
@@ -22,9 +25,18 @@ class CheckoutPage extends ConsumerStatefulWidget {
 
 class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   static const _deliveryKobo = 1500000;
-  String _payment = 'paystack';
   String? _addressId;
   bool _isSubmitting = false;
+  String? _activeOrderId;
+  String? _activeOrderNumber;
+  late final String _checkoutKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkoutKey = OrderRepository(ref.read(apiClientProvider))
+        .newIdempotencyKey();
+  }
 
   Future<void> _placeOrder() async {
     final addressId = _addressId;
@@ -37,30 +49,88 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
     setState(() => _isSubmitting = true);
     try {
+      final enabled = await ref.read(paystackEnabledProvider.future);
+      if (!enabled) {
+        throw StateError(
+          'Online payment is not configured. Add your Paystack test secret to the backend .env file.',
+        );
+      }
       final order = await ref
           .read(orderRepositoryProvider)
-          .createOrder(addressId: addressId, paymentProvider: _payment);
+          .createOrder(addressId: addressId, idempotencyKey: _checkoutKey);
       if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Order created'),
+      setState(() {
+        _activeOrderId = order.id;
+        _activeOrderNumber = order.orderNumber;
+      });
+      await _openPayment();
+    } catch (error) {
+      if (mounted) {
+        final message = error is StateError
+            ? error.message.toString()
+            : apiErrorMessage(error);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _openPayment() async {
+    final orderId = _activeOrderId;
+    if (orderId == null) return;
+    final redirect = await ref
+        .read(orderRepositoryProvider)
+        .startPaystack(orderId);
+    final opened = await launchUrl(
+      redirect.authorizationUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened) throw StateError('Could not open the Paystack payment page.');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
           content: Text(
-            '${order.orderNumber} · ${order.status.replaceAll('_', ' ')}\n\n'
-            '${order.paymentMessage}\n\n'
-            'Total: ${formatNaira(order.totalKobo)}',
+            'Pay securely with Paystack. Return here after checkout to confirm your payment.',
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text('Done'),
-            ),
-          ],
         ),
       );
+    }
+  }
+
+  Future<void> _verifyPayment() async {
+    final orderId = _activeOrderId;
+    if (orderId == null) return;
+    setState(() => _isSubmitting = true);
+    try {
+      final status = await ref
+          .read(orderRepositoryProvider)
+          .verifyPayment(orderId);
+      ref.invalidate(ordersProvider);
+      ref.invalidate(cartProvider);
+      if (!mounted) return;
+      if (status == 'paid' ||
+          status == 'processing' ||
+          status == 'shipped' ||
+          status == 'delivered') {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Payment confirmed'),
+            content: Text('Order $_activeOrderNumber has been paid securely.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context);
+                },
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -189,43 +259,64 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
             const SizedBox(height: 20),
             const StoreEyebrow('PAYMENT METHOD'),
             const SizedBox(height: 10),
-            ...const [
-              ('paystack', 'Paystack Checkout', 'Card and bank transfer'),
-              ('flutterwave', 'Flutterwave', 'Cards and local payment methods'),
-              ('bank_transfer', 'Bank Transfer', 'Direct bank transfer'),
-            ].map(
-              (option) => ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                tileColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: StoreColors.line),
-                ),
-                title: Text(
-                  option.$2,
-                  style: const TextStyle(fontFamily: 'serif'),
-                ),
-                subtitle: Text(option.$3, style: const TextStyle(fontSize: 11)),
-                leading: Icon(
-                  _payment == option.$1
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: StoreColors.olive,
-                ),
-                onTap: () => setState(() => _payment = option.$1),
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              tileColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: StoreColors.line),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                'Orders remain pending until a payment provider is configured and confirms payment.',
-                style: TextStyle(fontSize: 11, color: StoreColors.muted),
+              title: const Text(
+                'Paystack secure checkout',
+                style: TextStyle(fontFamily: 'serif'),
               ),
+              subtitle: const Text(
+                'Cards and supported local payment methods',
+                style: TextStyle(fontSize: 11),
+              ),
+              leading: const Icon(Icons.lock_outline, color: StoreColors.olive),
             ),
+            ref
+                .watch(paystackEnabledProvider)
+                .when(
+                  data: (enabled) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(
+                      enabled
+                          ? 'You will be redirected to Paystack. Your order is confirmed only after the backend verifies payment.'
+                          : 'Paystack is not configured. Add PAYSTACK_SECRET_KEY to the backend .env file to enable test checkout.',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: StoreColors.muted,
+                      ),
+                    ),
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (error, _) => Text(
+                    apiErrorMessage(error),
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+            if (_activeOrderId != null) ...[
+              const SizedBox(height: 8),
+              Text('Order $_activeOrderNumber is awaiting payment.'),
+              OutlinedButton(
+                onPressed: _isSubmitting ? null : _openPayment,
+                child: const Text('Open Paystack checkout'),
+              ),
+              TextButton(
+                onPressed: _isSubmitting ? null : _verifyPayment,
+                child: const Text('I have paid - verify payment'),
+              ),
+            ],
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _isSubmitting ? null : _placeOrder,
+                onPressed:
+                    _isSubmitting ||
+                        ref.watch(paystackEnabledProvider).asData?.value != true
+                    ? null
+                    : _placeOrder,
                 style: FilledButton.styleFrom(
                   backgroundColor: StoreColors.ink,
                   padding: const EdgeInsets.all(16),
