@@ -17,6 +17,8 @@ dependencies:
   google_fonts: ^9.0.0
   dio: ^5.11.1
   flutter_secure_storage: ^11.2.0
+  geocoding: ^4.0.0
+  geolocator: ^14.0.2
   url_launcher: ^6.3.3
 
 dev_dependencies:

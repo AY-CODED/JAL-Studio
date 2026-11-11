@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:jal_studio/features/account/data/account_repository.dart';
+import 'package:jal_studio/features/account/presentation/account_pages.dart';
 import 'package:jal_studio/features/auth/data/auth_repository.dart';
 import 'package:jal_studio/features/auth/providers/auth_provider.dart';
 import 'package:jal_studio/features/cart_checkout/presentation/bag_content.dart';
@@ -91,6 +92,59 @@ void main() {
 
     expect(find.text('ORDER SUMMARY'), findsOneWidget);
     expect(find.text('Paystack secure checkout'), findsOneWidget);
+  });
+
+  testWidgets('Storefront layout adapts to phone and tablet widths', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogProductsProvider.overrideWith(
+            (ref) async => sampleStoreProducts,
+          ),
+          authProvider.overrideWith(_UnauthenticatedController.new),
+        ],
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final mobileLayoutError = tester.takeException();
+    expect(
+      mobileLayoutError,
+      isNull,
+      reason: 'The storefront should fit a phone viewport.',
+    );
+
+    tester.view.physicalSize = const Size(1024, 800);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Current location explains permission before requesting access', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: AddAddressPage())),
+    );
+
+    await tester.tap(find.text('Use current location'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use your current location?'), findsOneWidget);
+    expect(
+      find.textContaining('only to help fill this delivery address'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(find.text('Use your current location?'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Bag and filter sheet fit on a small screen', (

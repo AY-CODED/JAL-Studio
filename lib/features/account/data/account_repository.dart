@@ -15,6 +15,8 @@ class DeliveryAddress {
     required this.state,
     required this.isDefault,
     this.postalCode,
+    this.latitude,
+    this.longitude,
   });
 
   factory DeliveryAddress.fromJson(Map<String, dynamic> json) =>
@@ -28,6 +30,8 @@ class DeliveryAddress {
         state: json['state'] as String,
         isDefault: json['isDefault'] as bool? ?? false,
         postalCode: json['postalCode'] as String?,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
       );
 
   final String id;
@@ -38,6 +42,8 @@ class DeliveryAddress {
   final String city;
   final String state;
   final String? postalCode;
+  final double? latitude;
+  final double? longitude;
   final bool isDefault;
 
   String get oneLineAddress => '$street, $city, $state';

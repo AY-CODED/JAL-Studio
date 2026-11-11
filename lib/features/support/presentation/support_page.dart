@@ -103,40 +103,45 @@ class _SupportPageState extends ConsumerState<SupportPage> {
           title: 'How can we help?',
           subtitle: 'Send our team a message and follow your requests here.',
         ),
-        Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _subject,
-                decoration: const InputDecoration(labelText: 'Subject'),
-                validator: (value) => (value?.trim().length ?? 0) < 3
-                    ? 'Please enter a short subject'
-                    : null,
-              ),
-              TextFormField(
-                controller: _message,
-                minLines: 4,
-                maxLines: 8,
-                decoration: const InputDecoration(
-                  labelText: 'How can we help?',
-                ),
-                validator: (value) => (value?.trim().length ?? 0) < 10
-                    ? 'Please provide a little more detail'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _sending ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: StoreColors.ink,
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _subject,
+                    decoration: const InputDecoration(labelText: 'Subject'),
+                    validator: (value) => (value?.trim().length ?? 0) < 3
+                        ? 'Please enter a short subject'
+                        : null,
                   ),
-                  child: Text(_sending ? 'Sending…' : 'Contact support'),
-                ),
+                  TextFormField(
+                    controller: _message,
+                    minLines: 4,
+                    maxLines: 8,
+                    decoration: const InputDecoration(
+                      labelText: 'How can we help?',
+                    ),
+                    validator: (value) => (value?.trim().length ?? 0) < 10
+                        ? 'Please provide a little more detail'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _sending ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: StoreColors.ink,
+                      ),
+                      child: Text(_sending ? 'Sending…' : 'Contact support'),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
         const SizedBox(height: 24),
