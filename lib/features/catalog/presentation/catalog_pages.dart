@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/store_colors.dart';
+import '../../../core/widgets/store_components.dart';
 import '../data/catalog_repository.dart';
 import '../domain/store_product.dart';
 import 'catalog_widgets.dart';
@@ -27,74 +28,134 @@ class StoreHomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: SizedBox(
-            height: 230,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset('assets/images/banner1.jpg', fit: BoxFit.cover),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.black26, Colors.black87],
-                    ),
-                  ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 680;
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: SizedBox(
+                height: wide ? 340 : 320,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    const Text(
-                      'NEW COLLECTION',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        letterSpacing: 2,
+                    Image.asset(
+                      'assets/images/banner1.jpg',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                    ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            Color(0xD9000000),
+                            Color(0x85000000),
+                            Color(0x10000000),
+                          ],
+                          stops: [0, .62, 1],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Timeless Elegance\nStarts Here',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        height: 1.15,
-                        fontFamily: 'serif',
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: wide ? 46 : 26,
+                        vertical: 28,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Modern styles. Classic vibes.',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: onShop,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 430),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'THE JAL STUDIO EDIT',
+                                style: TextStyle(
+                                  color: Color(0xFFE9D4AD),
+                                  fontSize: 10,
+                                  letterSpacing: 2.2,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 13),
+                              Text(
+                                'Timeless Elegance\nStarts Here',
+                                textAlign: TextAlign.left,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: wide ? 38 : 28,
+                                  height: 1.12,
+                                  fontFamily: 'serif',
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 9),
+                              const Text(
+                                'Modern styles. Classic vibes.',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 17),
+                              FilledButton(
+                                onPressed: onShop,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: StoreColors.white,
+                                  foregroundColor: StoreColors.ink,
+                                  minimumSize: const Size(140, 46),
+                                ),
+                                child: const Text('Explore the collection'),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      child: const Text('Shop now  →'),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+        const StoreEyebrow('CURATED FOR YOU'),
+        const SizedBox(height: 12),
         const CategoryChips(
           categories: ['All', 'Men', 'Women', 'Accessories', 'Activewear'],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 22),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'The collection',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Considered pieces from independent ateliers.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(onPressed: onShop, child: const Text('View all')),
+          ],
+        ),
+        const SizedBox(height: 14),
         ProductGrid(
           products: products,
           wishlist: wishlist,
@@ -180,35 +241,34 @@ class _ShopContentState extends ConsumerState<ShopContent> {
         ),
       ),
       data: (visibleProducts) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'HOME  ›  ${_category.toUpperCase()}',
-              style: const TextStyle(
-                fontSize: 10,
-                letterSpacing: 1.2,
-                color: StoreColors.muted,
-              ),
-            ),
+            const StoreEyebrow('DISCOVER YOUR NEXT LOOK'),
             const SizedBox(height: 8),
+            Text(switch (_category) {
+              'Men' => 'Menswear',
+              'Women' => 'Womenswear',
+              'Accessories' => 'Accessories',
+              'Activewear' => 'Activewear',
+              _ => 'Shop',
+            }, style: Theme.of(context).textTheme.headlineLarge),
+            const SizedBox(height: 4),
             Text(
-              _category == 'All' ? 'Shop' : '${_category}wear',
-              style: const TextStyle(fontSize: 32, fontFamily: 'serif'),
+              'Modern styles for every occasion, selected from independent ateliers.',
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: StoreColors.muted),
             ),
-            const Text(
-              'Modern styles for every occasion. Find your next look.',
-              style: TextStyle(color: StoreColors.muted),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             TextField(
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search_rounded),
                 hintText: 'Search products, brands, styles',
                 suffixIcon: _searchText.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Clear search',
                         onPressed: () {
                           _searchTimer?.cancel();
                           setState(() {
@@ -218,7 +278,6 @@ class _ShopContentState extends ConsumerState<ShopContent> {
                         },
                         icon: const Icon(Icons.close),
                       ),
-                border: const OutlineInputBorder(),
               ),
               onChanged: (value) {
                 _searchText = value;
@@ -241,16 +300,13 @@ class _ShopContentState extends ConsumerState<ShopContent> {
               selected: _category,
               onSelected: (category) => setState(() => _category = category),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   '${visibleProducts.length} pieces',
-                  style: const TextStyle(
-                    color: StoreColors.muted,
-                    fontSize: 12,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 TextButton.icon(
                   onPressed: () async {
@@ -311,18 +367,20 @@ class _ShopContentState extends ConsumerState<ShopContent> {
                       _sort = selected.sort;
                     });
                   },
-                  icon: const Icon(Icons.tune, size: 18),
+                  icon: const Icon(Icons.tune_rounded, size: 18),
                   label: const Text('Filter & sort'),
-                  style: TextButton.styleFrom(foregroundColor: StoreColors.ink),
                 ),
               ],
             ),
-            ProductGrid(
-              products: visibleProducts,
-              wishlist: widget.wishlist,
-              onWishlist: widget.onWishlist,
-              onOpenProduct: widget.onOpenProduct,
-            ),
+            if (visibleProducts.isEmpty)
+              const _EmptyProducts()
+            else
+              ProductGrid(
+                products: visibleProducts,
+                wishlist: widget.wishlist,
+                onWishlist: widget.onWishlist,
+                onOpenProduct: widget.onOpenProduct,
+              ),
           ],
         ),
       ),
@@ -350,13 +408,29 @@ class ProductCollectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => products.isEmpty
       ? Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Text(
-              emptyMessage,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: StoreColors.muted),
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: const BoxDecoration(
+                  color: StoreColors.oliveWash,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite_border_rounded,
+                  color: StoreColors.olive,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                emptyMessage,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: StoreColors.muted),
+              ),
+            ],
           ),
         )
       : SingleChildScrollView(
@@ -364,11 +438,10 @@ class ProductCollectionPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontFamily: 'serif', fontSize: 32),
-              ),
-              const SizedBox(height: 16),
+              StoreEyebrow(title.toUpperCase()),
+              const SizedBox(height: 8),
+              Text(title, style: Theme.of(context).textTheme.headlineLarge),
+              const SizedBox(height: 18),
               ProductGrid(
                 products: products,
                 wishlist: wishlist,
@@ -378,4 +451,42 @@ class ProductCollectionPage extends StatelessWidget {
             ],
           ),
         );
+}
+
+class _EmptyProducts extends StatelessWidget {
+  const _EmptyProducts();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 44),
+    child: Center(
+      child: Column(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: const BoxDecoration(
+              color: StoreColors.oliveWash,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.search_off_rounded,
+              color: StoreColors.olive,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'No pieces found',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Try a different search or adjust your filters.',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
 }

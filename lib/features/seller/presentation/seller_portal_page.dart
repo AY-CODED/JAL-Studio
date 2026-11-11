@@ -179,9 +179,13 @@ class _SellerPortalPageState extends ConsumerState<SellerPortalPage> {
     ),
   );
 
-  Widget _applicationForm(Map<String, dynamic>? previous) =>
-      SingleChildScrollView(
-        padding: const EdgeInsets.all(22),
+  Widget _applicationForm(
+    Map<String, dynamic>? previous,
+  ) => SingleChildScrollView(
+    padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620),
         child: Form(
           key: _formKey,
           child: Column(
@@ -232,7 +236,9 @@ class _SellerPortalPageState extends ConsumerState<SellerPortalPage> {
             ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _dashboard() => FutureBuilder(
     future: Future.wait([

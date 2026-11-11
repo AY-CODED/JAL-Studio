@@ -84,3 +84,11 @@ Payments remain unavailable until Paystack is configured on the backend. Start
 with a Paystack test secret key and follow the backend's
 [Paystack setup guide](../jal-backend/README.md#paystack-test-setup). Refunds,
 seller payouts, and courier integrations are not enabled by this checkout flow.
+
+## Location permissions
+
+The app does not request location access at startup. On **Profile → Delivery
+Addresses → Add a new address**, choose **Use current location** to see an
+explanation and then the operating system permission prompt. If allowed, the
+app uses the device location to suggest address fields and attach coordinates
+to the saved address. You can decline permission and enter an address manually.

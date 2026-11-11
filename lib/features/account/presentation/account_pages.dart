@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../core/network/api_error_message.dart';
+import '../../../core/location/current_location_service.dart';
 import '../../../core/theme/store_colors.dart';
 import '../../../core/widgets/store_components.dart';
 import '../../../core/utils/currency.dart';
@@ -130,68 +132,76 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final user = ref.watch(authProvider).asData?.value;
     return StorePageScaffold(
       title: 'Edit Profile',
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            children: [
-              const PageIntro(
-                icon: Icons.person_outline,
-                title: 'Edit Profile',
-                subtitle: 'Your member information',
-              ),
-              CircleAvatar(
-                radius: 42,
-                backgroundColor: StoreColors.ink,
-                child: Text(
-                  (user?.fullName.isNotEmpty == true
-                          ? user!.fullName[0].toUpperCase()
-                          : '?')
-                      .toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontFamily: 'serif',
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  const PageIntro(
+                    icon: Icons.person_outline,
+                    title: 'Edit Profile',
+                    subtitle: 'Your member information',
                   ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'FULL NAME'),
-                validator: (value) =>
-                    (value?.trim().length ?? 0) < 2 ? 'Enter your name' : null,
-              ),
-              TextFormField(
-                initialValue: user?.email ?? '',
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'EMAIL ADDRESS',
-                  helperText: 'Email changes require account verification.',
-                ),
-              ),
-              TextFormField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'PHONE NUMBER'),
-                validator: (value) => (value?.trim().length ?? 0) > 30
-                    ? 'Phone number is too long'
-                    : null,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _saving ? null : _save,
-                  style: FilledButton.styleFrom(
+                  CircleAvatar(
+                    radius: 42,
                     backgroundColor: StoreColors.ink,
-                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      (user?.fullName.isNotEmpty == true
+                              ? user!.fullName[0].toUpperCase()
+                              : '?')
+                          .toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontFamily: 'serif',
+                      ),
+                    ),
                   ),
-                  child: Text(_saving ? 'Saving…' : 'Save changes'),
-                ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _name,
+                    decoration: const InputDecoration(labelText: 'FULL NAME'),
+                    validator: (value) => (value?.trim().length ?? 0) < 2
+                        ? 'Enter your name'
+                        : null,
+                  ),
+                  TextFormField(
+                    initialValue: user?.email ?? '',
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'EMAIL ADDRESS',
+                      helperText: 'Email changes require account verification.',
+                    ),
+                  ),
+                  TextFormField(
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'PHONE NUMBER',
+                    ),
+                    validator: (value) => (value?.trim().length ?? 0) > 30
+                        ? 'Phone number is too long'
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _saving ? null : _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: StoreColors.ink,
+                        padding: const EdgeInsets.all(16),
+                      ),
+                      child: Text(_saving ? 'Saving…' : 'Save changes'),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -566,49 +576,59 @@ class _BodyMeasurementsPageState extends ConsumerState<BodyMeasurementsPage> {
               'sleeveCm': 'Sleeve',
               'insideLegCm': 'Inside leg',
             };
-            return Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  const PageIntro(
-                    icon: Icons.straighten,
-                    title: 'Body Measurements',
-                    subtitle: 'Save your fit profile in centimetres.',
-                  ),
-                  ...fields.entries.map((entry) {
-                    final value = measurements[entry.key];
-                    return TextFormField(
-                      key: ValueKey('${entry.key}-${value ?? ''}'),
-                      initialValue: value == null ? '' : '$value',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 620),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(18),
+                    children: [
+                      const PageIntro(
+                        icon: Icons.straighten,
+                        title: 'Body Measurements',
+                        subtitle: 'Save your fit profile in centimetres.',
                       ),
-                      decoration: InputDecoration(labelText: entry.value),
-                      validator: (input) {
-                        if (input == null || input.trim().isEmpty) return null;
-                        final number = double.tryParse(input.trim());
-                        return number == null || number <= 0 || number > 300
-                            ? 'Enter a measurement in centimetres'
-                            : null;
-                      },
-                      onSaved: (input) => _values[entry.key] = input ?? '',
-                    );
-                  }),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: StoreColors.ink,
-                    ),
-                    child: Text(_saving ? 'Saving…' : 'Save measurements'),
+                      ...fields.entries.map((entry) {
+                        final value = measurements[entry.key];
+                        return TextFormField(
+                          key: ValueKey('${entry.key}-${value ?? ''}'),
+                          initialValue: value == null ? '' : '$value',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(labelText: entry.value),
+                          validator: (input) {
+                            if (input == null || input.trim().isEmpty) {
+                              return null;
+                            }
+                            final number = double.tryParse(input.trim());
+                            return number == null || number <= 0 || number > 300
+                                ? 'Enter a measurement in centimetres'
+                                : null;
+                          },
+                          onSaved: (input) => _values[entry.key] = input ?? '',
+                        );
+                      }),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _saving ? null : _save,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: StoreColors.ink,
+                        ),
+                        child: Text(_saving ? 'Saving…' : 'Save measurements'),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Measurements help you choose a size; always confirm garment-specific sizing with the seller.',
+                        style: TextStyle(
+                          color: StoreColors.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Measurements help you choose a size; always confirm garment-specific sizing with the seller.',
-                    style: TextStyle(color: StoreColors.muted, fontSize: 12),
-                  ),
-                ],
+                ),
               ),
             );
           },
@@ -770,6 +790,10 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   final _phone = TextEditingController();
   final _postalCode = TextEditingController();
   bool _saving = false;
+  bool _findingLocation = false;
+  double? _latitude;
+  double? _longitude;
+  String? _locationMessage;
 
   @override
   void dispose() {
@@ -796,6 +820,10 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
         'phone': _phone.text.trim(),
         if (_postalCode.text.trim().isNotEmpty)
           'postalCode': _postalCode.text.trim(),
+        if (_latitude != null && _longitude != null) ...{
+          'latitude': _latitude!,
+          'longitude': _longitude!,
+        },
       });
       ref.invalidate(addressesProvider);
       if (mounted) Navigator.pop(context);
@@ -808,39 +836,174 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
     }
   }
 
+  Future<void> _useCurrentLocation() async {
+    final continueWithLocation = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.location_on_outlined),
+        title: const Text('Use your current location?'),
+        content: const Text(
+          'JAL Studio will ask your device for location access only to help fill this delivery address. You can also enter the address manually.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (continueWithLocation != true || !mounted) return;
+
+    setState(() {
+      _findingLocation = true;
+      _locationMessage = null;
+    });
+    try {
+      const locationService = CurrentLocationService();
+      final location = await locationService.getCurrentLocation();
+      if (!mounted) return;
+      setState(() {
+        _latitude = location.latitude;
+        _longitude = location.longitude;
+        if (location.street != null) _street.text = location.street!;
+        if (location.city != null) _city.text = location.city!;
+        if (location.state != null) _state.text = location.state!;
+        if (location.postalCode != null) {
+          _postalCode.text = location.postalCode!;
+        }
+        _locationMessage = location.summary.isEmpty
+            ? 'Location pinned. Please complete any missing address fields.'
+            : 'Location pinned: ${location.summary}';
+      });
+    } on LocationUnavailableException catch (error) {
+      if (!mounted) return;
+      if (error.canOpenSettings) {
+        final openSettings = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Location permission is off'),
+            content: Text(error.message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Open settings'),
+              ),
+            ],
+          ),
+        );
+        if (openSettings == true) {
+          if (error.openLocationSettings) {
+            await Geolocator.openLocationSettings();
+          } else {
+            await Geolocator.openAppSettings();
+          }
+        }
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not determine your address from location. Enter it manually or try again. ${apiErrorMessage(error)}',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _findingLocation = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => StorePageScaffold(
     title: 'New address',
-    child: Form(
-      key: _formKey,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _addressField(_label, 'ADDRESS LABEL'),
-            _addressField(_name, 'FULL NAME'),
-            _addressField(_street, 'STREET ADDRESS'),
-            _addressField(_city, 'CITY'),
-            _addressField(_state, 'STATE'),
-            _addressField(
-              _phone,
-              'PHONE NUMBER',
-              keyboardType: TextInputType.phone,
-            ),
-            _addressField(_postalCode, 'POSTAL CODE', required: false),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _saving ? null : _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: StoreColors.ink,
-                  padding: const EdgeInsets.all(16),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _findingLocation ? null : _useCurrentLocation,
+                    icon: _findingLocation
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.my_location_rounded),
+                    label: Text(
+                      _findingLocation
+                          ? 'Finding your location…'
+                          : 'Use current location',
+                    ),
+                  ),
                 ),
-                child: Text(_saving ? 'Saving…' : 'Save address'),
-              ),
+                if (_locationMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _locationMessage!,
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: StoreColors.olive),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _addressField(_label, 'ADDRESS LABEL'),
+                _addressField(_name, 'FULL NAME'),
+                _addressField(_street, 'STREET ADDRESS'),
+                _addressField(_city, 'CITY'),
+                _addressField(_state, 'STATE'),
+                _addressField(
+                  _phone,
+                  'PHONE NUMBER',
+                  keyboardType: TextInputType.phone,
+                ),
+                _addressField(_postalCode, 'POSTAL CODE', required: false),
+                if (_latitude != null && _longitude != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Precise location will be saved with this address.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _saving ? null : _save,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: StoreColors.ink,
+                      padding: const EdgeInsets.all(16),
+                    ),
+                    child: Text(_saving ? 'Saving…' : 'Save address'),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     ),

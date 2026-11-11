@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_error_message.dart';
-import '../../../core/theme/store_colors.dart';
 import '../../../core/widgets/store_components.dart';
 import '../providers/auth_provider.dart';
 
@@ -60,83 +59,88 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Widget build(BuildContext context) => StorePageScaffold(
     title: 'EKŌ',
     child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PageIntro(
-              icon: Icons.person_outline,
-              title: _isRegistering ? 'Create your account' : 'Welcome back',
-              subtitle: _isRegistering
-                  ? 'Join EKŌ for a more personal wardrobe.'
-                  : 'Sign in to access your bag and member profile.',
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PageIntro(
+                  icon: Icons.person_outline,
+                  title: _isRegistering
+                      ? 'Create your account'
+                      : 'Welcome back',
+                  subtitle: _isRegistering
+                      ? 'Join EKŌ for a more personal wardrobe.'
+                      : 'Sign in to access your bag and member profile.',
+                ),
+                if (_isRegistering)
+                  TextFormField(
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(labelText: 'Full name'),
+                    validator: (value) => (value?.trim().length ?? 0) < 2
+                        ? 'Enter your name'
+                        : null,
+                  ),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  decoration: const InputDecoration(labelText: 'Email address'),
+                  validator: (value) {
+                    final email = value?.trim() ?? '';
+                    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+                        ? null
+                        : 'Enter a valid email address';
+                  },
+                ),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    helperText: _isRegistering
+                        ? 'Use at least 10 characters'
+                        : null,
+                  ),
+                  validator: (value) =>
+                      (value?.length ?? 0) < (_isRegistering ? 10 : 1)
+                      ? _isRegistering
+                            ? 'Password must be at least 10 characters'
+                            : 'Enter your password'
+                      : null,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(_isRegistering ? 'Create account' : 'Sign in'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => setState(() => _isRegistering = !_isRegistering),
+                  child: Text(
+                    _isRegistering
+                        ? 'Already a member? Sign in'
+                        : 'New to EKŌ? Create an account',
+                  ),
+                ),
+              ],
             ),
-            if (_isRegistering)
-              TextFormField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Full name'),
-                validator: (value) =>
-                    (value?.trim().length ?? 0) < 2 ? 'Enter your name' : null,
-              ),
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              decoration: const InputDecoration(labelText: 'Email address'),
-              validator: (value) {
-                final email = value?.trim() ?? '';
-                return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
-                    ? null
-                    : 'Enter a valid email address';
-              },
-            ),
-            TextFormField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                helperText: _isRegistering
-                    ? 'Use at least 10 characters'
-                    : null,
-              ),
-              validator: (value) =>
-                  (value?.length ?? 0) < (_isRegistering ? 10 : 1)
-                  ? _isRegistering
-                        ? 'Password must be at least 10 characters'
-                        : 'Enter your password'
-                  : null,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _isSubmitting ? null : _submit,
-              style: FilledButton.styleFrom(
-                backgroundColor: StoreColors.ink,
-                padding: const EdgeInsets.all(16),
-              ),
-              child: _isSubmitting
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(_isRegistering ? 'Create account' : 'Sign in'),
-            ),
-            TextButton(
-              onPressed: _isSubmitting
-                  ? null
-                  : () => setState(() => _isRegistering = !_isRegistering),
-              child: Text(
-                _isRegistering
-                    ? 'Already a member? Sign in'
-                    : 'New to EKŌ? Create an account',
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     ),

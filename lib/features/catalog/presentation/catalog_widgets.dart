@@ -76,81 +76,132 @@ class ProductGrid extends StatelessWidget {
   final ValueChanged<StoreProduct> onOpenProduct;
 
   @override
-  Widget build(BuildContext context) => GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: products.length,
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: .63,
-    ),
-    itemBuilder: (context, index) {
-      final product = products[index];
-      final saved = wishlist.contains(product.id);
-      return GestureDetector(
-        onTap: () => onOpenProduct(product),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 940
+          ? 4
+          : constraints.maxWidth >= 600
+          ? 3
+          : 2;
+      final ratio = columns == 2 ? .64 : .74;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: products.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 16,
+          childAspectRatio: ratio,
+        ),
+        itemBuilder: (context, index) {
+          final product = products[index];
+          final saved = wishlist.contains(product.id);
+          return Card(
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => onOpenProduct(product),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: StoreProductImage(
-                      product: product,
-                      fit: BoxFit.cover,
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        StoreProductImage(product: product, fit: BoxFit.cover),
+                        Positioned(
+                          top: 9,
+                          right: 9,
+                          child: CircleIconButton(
+                            icon: saved
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            onPressed: () => onWishlist(product.id),
+                          ),
+                        ),
+                        if (product.stock <= 3 && product.stock > 0)
+                          Positioned(
+                            left: 9,
+                            bottom: 9,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: StoreColors.white.withValues(alpha: .94),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'FEW LEFT',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  letterSpacing: .8,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: CircleIconButton(
-                      icon: saved ? Icons.favorite : Icons.favorite_border,
-                      onPressed: () => onWishlist(product.id),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(11, 10, 8, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.brand.isEmpty
+                              ? product.categoryLabel
+                              : product.brand.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: StoreColors.muted,
+                            fontSize: 9,
+                            letterSpacing: .9,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          product.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                product.price,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_outward_rounded,
+                              size: 15,
+                              color: StoreColors.muted,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              product.categoryLabel,
-              style: const TextStyle(
-                color: StoreColors.muted,
-                fontSize: 9,
-                letterSpacing: .8,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              product.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  product.price,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => onOpenProduct(product),
-                  icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       );
     },
   );

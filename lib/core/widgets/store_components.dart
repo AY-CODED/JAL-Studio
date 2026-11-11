@@ -14,27 +14,37 @@ class PageIntro extends StatelessWidget {
   final String subtitle;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 26, 20, 24),
-    child: Column(
-      children: [
-        CircleAvatar(
-          radius: 27,
-          backgroundColor: StoreColors.sand,
-          child: Icon(icon, color: StoreColors.ink),
+    padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: StoreColors.oliveWash,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: StoreColors.ink, size: 22),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: StoreColors.muted),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 30, fontFamily: 'serif'),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 11, color: StoreColors.muted),
-        ),
-      ],
+      ),
     ),
   );
 }
@@ -53,25 +63,37 @@ class StorePageScaffold extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: StoreColors.paper,
     appBar: AppBar(
-      backgroundColor: StoreColors.paper,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
+      leadingWidth: 56,
       leading: IconButton(
+        tooltip: 'Back',
         onPressed: () => Navigator.maybePop(context),
-        icon: const Icon(Icons.arrow_back, color: StoreColors.ink),
+        icon: const Icon(Icons.arrow_back),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: StoreColors.ink,
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      centerTitle: true,
+      title: Text(title),
       actions: actions,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(height: 1, color: StoreColors.line),
+      ),
     ),
-    body: SafeArea(child: child),
+    body: SafeArea(
+      top: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth > 1120
+              ? 1120.0
+              : constraints.maxWidth;
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: width,
+              height: constraints.maxHeight,
+              child: child,
+            ),
+          );
+        },
+      ),
+    ),
   );
 }
 
@@ -90,7 +112,7 @@ class CircleIconButton extends StatelessWidget {
     child: IconButton(
       onPressed: onPressed,
       icon: Icon(icon, size: 19, color: StoreColors.ink),
-      constraints: const BoxConstraints.tightFor(width: 38, height: 38),
+      constraints: const BoxConstraints.tightFor(width: 42, height: 42),
       padding: EdgeInsets.zero,
     ),
   );

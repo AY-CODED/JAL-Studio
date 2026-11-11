@@ -171,7 +171,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: StoreColors.paper,
       appBar: _buildAppBar(cart.asData?.value.itemCount ?? 0),
-      body: IndexedStack(index: _tab, children: tabs),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth > 1120
+              ? 1120.0
+              : constraints.maxWidth;
+          return Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: width,
+              height: constraints.maxHeight,
+              child: IndexedStack(index: _tab, children: tabs),
+            ),
+          );
+        },
+      ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: StoreColors.paper,
         surfaceTintColor: Colors.transparent,
@@ -184,7 +198,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(icon: Icon(Icons.search), label: 'Shop'),
+          NavigationDestination(
+            icon: Icon(Icons.search_rounded),
+            selectedIcon: Icon(Icons.search_rounded),
+            label: 'Shop',
+          ),
           NavigationDestination(
             icon: Icon(Icons.favorite_border),
             selectedIcon: Icon(Icons.favorite),
@@ -212,36 +230,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     surfaceTintColor: Colors.transparent,
     elevation: 0,
     leading: IconButton(
-      icon: const Icon(Icons.menu, color: StoreColors.ink),
+      tooltip: 'Open profile',
+      icon: const Icon(Icons.menu_rounded, color: StoreColors.ink),
       onPressed: () => setState(() => _tab = 4),
     ),
-    title: const Text(
-      'E K Ō',
-      style: TextStyle(
-        color: StoreColors.ink,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 4,
-      ),
+    title: const Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'E K Ō',
+          style: TextStyle(
+            color: StoreColors.ink,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 4,
+            height: 1.1,
+          ),
+        ),
+        SizedBox(height: 3),
+        Text(
+          'JAL STUDIO',
+          style: TextStyle(
+            color: StoreColors.muted,
+            fontSize: 8,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     ),
     centerTitle: true,
     actions: [
       IconButton(
+        tooltip: 'Search the collection',
         onPressed: () => setState(() => _tab = 1),
-        icon: const Icon(Icons.search, color: StoreColors.ink),
+        icon: const Icon(Icons.search_rounded, color: StoreColors.ink),
       ),
       IconButton(
+        tooltip: 'Shopping bag',
         onPressed: () => setState(() => _tab = 3),
         icon: Badge(
           isLabelVisible: cartCount > 0,
           label: Text('$cartCount'),
-          backgroundColor: StoreColors.ink,
+          backgroundColor: StoreColors.olive,
           child: const Icon(
-            Icons.shopping_cart_outlined,
+            Icons.shopping_bag_outlined,
             color: StoreColors.ink,
           ),
         ),
       ),
     ],
+    bottom: PreferredSize(
+      preferredSize: const Size.fromHeight(1),
+      child: Container(height: 1, color: StoreColors.line),
+    ),
   );
 
   Future<void> _signOut() async {
